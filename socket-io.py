@@ -1,7 +1,12 @@
+import os
 from socketIO_client import SocketIO, LoggingNamespace
+from json import load, dump
+import logging
+import settings
 
+logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s')
+log = logging.getLogger(__name__)
 
-TTL = 3
 
 class BoxManager(object):
     def __init__(self):
@@ -53,22 +58,19 @@ def on_connect():
 
 
 def on_disconnect():
-    print('disconnect')
+    log.debug('disconnect')
 
 
 def on_reconnect():
-    print('reconnect')
+    log.debug('reconnect')
 
-
-def on_response(*args):
-    print('on_aaa_response', args)
 
 
 def inventory(data):
     if data['macAddress'] == "00:16:25:12:16:4F":
         for tag in data['orderedRecords']:
             if tag['epc'] in online_tags:
-                online_tags[tag['epc']]['timeout'] = TTL
+                online_tags[tag['epc']]['timeout'] = settings.TTL
                 online_tags[tag['epc']]['age'] += 1
                 age = online_tags[tag['epc']]['age']
                 t = 20
@@ -76,7 +78,7 @@ def inventory(data):
                     print("Do you really need "+online_tags[tag['epc']]['name']+"? You haven\'t used it for " +str(age)+" seconds. You can sell it on ebay!")
                 pass
             elif tag['epc'] not in skip_tags: #tag['epc'] in prod_tags: #
-                online_tags[tag['epc']] = {'timeout': TTL, 'age': 0, 'name': ''}
+                online_tags[tag['epc']] = {'timeout': settings.TTL, 'age': 0, 'name': ''}
                 if tag['epc'] in prod_tags:
                     online_tags[tag['epc']]['name'] = prod_tags[tag['epc']].get('name', '')
                 print('New tag %s' % tag['epc'])
@@ -89,8 +91,19 @@ def inventory(data):
         online_tags[tag]['timeout'] -= 1
         if online_tags[tag]['timeout'] < 0:
             online_tags.pop(tag)
-            print('Removing tag %s' % tag )
+            log.debug('Removing tag %s' % tag )
 
+
+def load_data():
+    if os.path.exists(settings.DB_FILE):
+        if os.path.getsize(settings.DB_FILE) > 0:
+            with open(settings.DB_FILE, 'rb') as fp:
+                try:
+                    load(fp)
+                except ValueError:
+                    pass
+                except IOError as e:
+                    raise
 
 with SocketIO('balabanovo.westeurope.cloudapp.azure.com', 80, LoggingNamespace) as socketIO:
     socketIO.on('connect', on_connect)
