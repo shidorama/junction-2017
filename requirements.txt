@@ -1,2 +1,5 @@
 paho-mqtt
 socketIO-client
+requests
+HTMLParser
+lxml

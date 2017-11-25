@@ -1,8 +1,11 @@
-import os
-from socketIO_client import SocketIO, LoggingNamespace
-from json import load, dump
 import logging
+import os
+from json import load
+
+from socketIO_client import SocketIO, LoggingNamespace
+
 import settings
+from ebay_poller import get_price, get_url
 
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s')
 log = logging.getLogger(__name__)
@@ -69,7 +72,6 @@ def on_reconnect():
     log.debug('reconnect')
 
 
-
 def inventory(data):
     if data['macAddress'] == "00:16:25:12:16:4F":
         for tag in data['orderedRecords']:
@@ -79,26 +81,32 @@ def inventory(data):
                 age = online_tags[tag['tid']]['age']
                 if age >= settings.T and age % settings.T == 0:
                     box_name = box_reg.get(online_tags[tag['tid']]['box'])
-                    s = ""
-                    print("Do you really need "+online_tags[tag['tid']]['name']+" in "+ box_name + " box? You haven\'t used it for " +str(age)+" seconds. You can sell it on ebay"+s+"!")
+                    if online_tags[tag['tid']]['price'] is None:
+                        online_tags[tag['tid']]['price'] = get_price(online_tags[tag['tid']]['name'])
+                    print("Do you really need " + online_tags[tag['tid']][
+                        'name'] + " in " + box_name + " box? You haven\'t used it for " + str(
+                        age) + " seconds. You can sell it on ebay!")
+                    if online_tags[tag['tid']]['price']:
+                        print("We found it for %s. Check it out: %s" % (online_tags[tag['tid']]['price'], get_url(online_tags[tag['tid']]['name'])))
                 pass
-            elif tag['tid'] not in skip_tags: #tag['tid'] in prod_tags: #
+            elif tag['tid'] not in skip_tags:  # tag['tid'] in prod_tags: #
                 online_tags[tag['tid']] = {'timeout': settings.TTL, 'age': 0, 'name': '', 'box': tag['antenna_port']}
                 if tag['tid'] in prod_tags:
                     online_tags[tag['tid']]['name'] = prod_tags[tag['tid']].get('name', '')
                 log.debug('New tag %s' % tag['tid'])
-                #print(online_tags[tag['tid']])
-                while online_tags[tag['tid']]['name']=='':
+                # print(online_tags[tag['tid']])
+                while online_tags[tag['tid']]['name'] == '':
                     print("Enter name for new item")
                     online_tags[tag['tid']]['name'] = input()
                     online_tags[tag['tid']]['age'] = 0
+                    online_tags[tag['tid']]['price'] = None
 
-                #print(online_tags[tag['tid']]['name'])
+                    # print(online_tags[tag['tid']]['name'])
     for tag in list(online_tags.keys()):
         online_tags[tag]['timeout'] -= 1
         if online_tags[tag]['timeout'] < 0:
             online_tags.pop(tag)
-            log.debug('Removing tag %s' % tag )
+            log.debug('Removing tag %s' % tag)
 
 
 def load_data():
@@ -111,6 +119,7 @@ def load_data():
                     pass
                 except IOError as e:
                     raise
+
 
 with SocketIO('balabanovo.westeurope.cloudapp.azure.com', 80, LoggingNamespace) as socketIO:
     socketIO.on('connect', on_connect)
