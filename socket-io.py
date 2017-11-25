@@ -30,7 +30,7 @@ skip_tags = {
 
 prod_tags = {
     'E28068100000003C4E20212C': {
-        'name': 'Mouse'},
+        'name': 'Mouse A4Tech K4-61X'},
     'E28068100000003C4E1F3E05': {},
     'E28068100000003C4E1F3DCB': {},
     'E28068100000003C4E1F7F8C': {},
@@ -70,10 +70,21 @@ def inventory(data):
             if tag['epc'] in online_tags:
                 online_tags[tag['epc']]['timeout'] = TTL
                 online_tags[tag['epc']]['age'] += 1
+                age = online_tags[tag['epc']]['age']
+                t = 20
+                if age >= t and age%t==0:
+                    print("Do you really need "+online_tags[tag['epc']]['name']+"? You haven\'t used it for " +str(age)+" seconds. You can sell it on ebay!")
                 pass
-            elif tag['epc'] not in skip_tags:
-                online_tags[tag['epc']] = {'timeout': TTL, 'age': 0}
+            elif tag['epc'] not in skip_tags: #tag['epc'] in prod_tags: #
+                online_tags[tag['epc']] = {'timeout': TTL, 'age': 0, 'name': ''}
+                if tag['epc'] in prod_tags:
+                    online_tags[tag['epc']]['name'] = prod_tags[tag['epc']].get('name', '')
                 print('New tag %s' % tag['epc'])
+                while online_tags[tag['epc']]['name']=='':
+                    print("Enter name for new item")
+                    name = input()
+                    online_tags[tag['epc']]['name'] = name
+                #print(online_tags[tag['epc']]['name'])
     for tag in list(online_tags.keys()):
         online_tags[tag]['timeout'] -= 1
         if online_tags[tag]['timeout'] < 0:
