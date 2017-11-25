@@ -16,6 +16,8 @@ def get_price(name):
             price = None
     except IndexError as e:
         return None
+    except AttributeError as e:
+        return None
     return price
 
 def get_url(item):
