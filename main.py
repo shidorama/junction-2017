@@ -9,7 +9,6 @@ locations = {
     "Junction.2017.2",
     "Junction.2017.3",
     "Junction.2017.4",
-
 }
 
 # The callback for when the client receives a CONNACK response from the server.
