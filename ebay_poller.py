@@ -9,7 +9,7 @@ def get_price(name):
     x=data.content
     tree  = html.fromstring(x)
     try:
-        count = int(tree.find_class('rcnt')[0].text)
+        count = int(tree.find_class('rcnt')[0].text.replace(',',''))
         if count > 0:
             price = tree.find_class('prc')[0].find_class('bold')[0].text.split()[0]
         else:
